@@ -1,11 +1,11 @@
 streamlit==1.32.0
-opencv-python==4.9.0.80
+opencv-python-headless==4.9.0.80  # Changed from opencv-python
 numpy==1.26.4
 matplotlib==3.8.3
 scikit-image==0.22.0
 scikit-learn==1.4.0
 tensorflow>=2.16.0
-google-cloud-vision>=3.0.0  # Changed from fixed version
+google-cloud-vision>=3.0.0
 pillow==10.1.0
 pyheif==0.7.1
 pandas==2.2.0
