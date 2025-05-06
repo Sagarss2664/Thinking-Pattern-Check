@@ -98,7 +98,13 @@ else:
                 # Extract M letters
                 output_folder = os.path.join(temp_dir, "extracted_ms")
                 os.makedirs(output_folder, exist_ok=True)
-                st.session_state.m_images = extract_letters(img_cv, output_folder)
+                
+                try:
+                    st.session_state.m_images = extract_letters(img_cv, output_folder)
+                except Exception as e:
+                    st.error(f"Google Vision API error: {str(e)}")
+                    st.error("Please check your Google Cloud Vision authentication setup.")
+                    st.stop()
                 
                 if not st.session_state.m_images:
                     st.error("No 'M's were found in the script. Please upload a different image.")
