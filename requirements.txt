@@ -11,4 +11,4 @@ pyheif==0.7.1
 pandas==2.2.0
 google-auth>=2.0.0
 google-auth-oauthlib>=0.4.0
-pyheif==0.7.1 --only-binary=:all:
+pyheif==0.8.0
