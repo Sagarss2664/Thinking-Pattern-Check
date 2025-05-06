@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="results-container">
+    <h2>Analysis Results</h2>
+    
+    <div class="summary">
+        <h3>Dominant Thinking Pattern</h3>
+        <div class="pattern-card {{ results[0].prediction.lower() }}">
+            <h4>{{ results[0].prediction }}</h4>
+            <p>{{ results[0].confidence }}% confidence</p>
+        </div>
+    </div>
+    
+    <div class="detailed-results">
+        <h3>Individual M Analysis</h3>
+        <div class="m-samples">
+            {% for result in results %}
+            <div class="m-sample">
+                <img src="{{ url_for('static', filename='uploads/extracted_ms/' + result.image.split('/')[-1]) }}" 
+                     alt="Extracted M {{ result.id }}">
+                <div class="m-details">
+                    <p><strong>Pattern:</strong> {{ result.prediction }}</p>
+                    <p><strong>Confidence:</strong> {{ result.confidence }}%</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <a href="{{ url_for('upload_file') }}" class="btn">Analyze Another</a>
+</div>
+{% endblock %}

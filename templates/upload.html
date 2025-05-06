@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="upload-container">
+    <h2>Upload Your Handwriting Sample</h2>
+    <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_file') }}">
+        <div class="file-upload">
+            <input type="file" name="file" id="file" accept="image/*" required>
+            <label for="file">Choose an image</label>
+        </div>
+        <button type="submit" class="btn">Analyze</button>
+    </form>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+</div>
+{% endblock %}
