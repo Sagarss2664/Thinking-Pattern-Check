@@ -4,8 +4,8 @@ numpy==1.26.4
 matplotlib==3.8.3
 scikit-image==0.22.0
 scikit-learn==1.4.0
-tensorflow>=2.16.0  # Updated for Python 3.12 support
-google-cloud-vision==3.4.6
+tensorflow>=2.16.0
+google-cloud-vision>=3.0.0  # Changed from fixed version
 pillow==10.1.0
 pyheif==0.7.1
 pandas==2.2.0
