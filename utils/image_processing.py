@@ -6,29 +6,32 @@ from PIL import Image
 from google.cloud import vision
 from google.oauth2 import service_account
 import streamlit as st
+import json
 
 def get_google_vision_client():
     """Initialize Google Vision client with credentials"""
     try:
-        # For Streamlit Cloud (using secrets)
+        # Option 1: Streamlit Secrets (properly formatted)
         if 'gcp_service_account' in st.secrets:
-            credentials = service_account.Credentials.from_service_account_info(
-                st.secrets["gcp_service_account"]
-            )
+            creds_info = dict(st.secrets["gcp_service_account"])
+            credentials = service_account.Credentials.from_service_account_info(creds_info)
             return vision.ImageAnnotatorClient(credentials=credentials)
         
-        # For local development (using JSON file)
+        # Option 2: Local JSON file
         credential_path = "credentials/google_Api.json"
         if os.path.exists(credential_path):
-            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credential_path
             credentials = service_account.Credentials.from_service_account_file(credential_path)
             return vision.ImageAnnotatorClient(credentials=credentials)
         
-        # Fallback to default credentials if neither exists
-        return vision.ImageAnnotatorClient()
+        # Option 3: Environment variable (for GCP deployments)
+        if 'GOOGLE_APPLICATION_CREDENTIALS' in os.environ:
+            return vision.ImageAnnotatorClient()
+            
+        raise Exception("No valid Google Cloud credentials found")
         
     except Exception as e:
-        st.error(f"Failed to initialize Google Vision client: {str(e)}")
+        st.error(f"❌ Failed to initialize Google Vision client: {str(e)}")
+        st.error("Please check your authentication setup")
         raise
 
 def heic_to_pil(heic_path):
@@ -44,13 +47,7 @@ def heic_to_pil(heic_path):
     )
     return image
 
-# def process_image(image_path):
-#     """Process an image file and return OpenCV format"""
-#     if image_path.lower().endswith('.heic'):
-#         img = heic_to_pil(image_path)
-#     else:
-#         img = Image.open(image_path)
-#     return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+
 def process_image(image_path):
     """Process an image file and return OpenCV format"""
     if image_path.lower().endswith('.heic'):
