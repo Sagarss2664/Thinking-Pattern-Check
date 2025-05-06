@@ -44,12 +44,19 @@ def heic_to_pil(heic_path):
     )
     return image
 
+# def process_image(image_path):
+#     """Process an image file and return OpenCV format"""
+#     if image_path.lower().endswith('.heic'):
+#         img = heic_to_pil(image_path)
+#     else:
+#         img = Image.open(image_path)
+#     return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 def process_image(image_path):
     """Process an image file and return OpenCV format"""
     if image_path.lower().endswith('.heic'):
-        img = heic_to_pil(image_path)
-    else:
-        img = Image.open(image_path)
+        st.error("HEIC format not supported. Please upload JPG or PNG.")
+        return None
+    img = Image.open(image_path)
     return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
 def extract_letters(img_cv, output_folder):
