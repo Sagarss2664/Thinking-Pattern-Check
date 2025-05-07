@@ -16,7 +16,7 @@ def get_google_vision_client():
         
         # Force fresh credentials
         credentials = service_account.Credentials.from_service_account_file(
-            "credentials/google_Api.json",
+            "../../credentials/google_Api.json",
             scopes=["https://www.googleapis.com/robot/v1/metadata/x509/ocr-892%40directed-seeker-456203-c1.iam.gserviceaccount.com"]
         )
         
