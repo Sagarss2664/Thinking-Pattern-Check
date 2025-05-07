@@ -10,41 +10,37 @@ import json
 
 def get_google_vision_client():
     try:
-        # Debug: Print available auth methods
-        st.write("Checking authentication methods...")
-        
-        # Method 1: Streamlit Secrets (for deployment)
-        if 'gcp_service_account' in st.secrets:
-            st.write("Attempting Streamlit secrets auth...")
-            creds_dict = dict(st.secrets["gcp_service_account"])
-            # Fix escaped newlines in private key
-            creds_dict['private_key'] = creds_dict['private_key'].replace('\\n', '\n')
-            credentials = service_account.Credentials.from_service_account_info(creds_dict)
-            st.success("✅ Authenticated via Streamlit secrets!")
-            return vision.ImageAnnotatorClient(credentials=credentials)
-        
-        # Method 2: Local JSON file (for development)
-        cred_path = "credentials/google_Api.json"
-        if os.path.exists(cred_path):
-            st.write(f"Attempting local JSON auth ({cred_path})...")
-            client = vision.ImageAnnotatorClient.from_service_account_file(cred_path)
-            st.success("✅ Authenticated via local JSON file!")
-            return client
-        
-        # Method 3: Environment variable (fallback)
-        st.write("Attempting environment variable auth...")
-        client = vision.ImageAnnotatorClient()
-        st.success("✅ Authenticated via environment variable!")
-        return client
-        
+        # Method 1: Direct credentials with explicit scopes
+        if os.path.exists("credentials/google_Api.json"):
+            credentials = service_account.Credentials.from_service_account_file(
+                "credentials/google_Api.json",
+                scopes=["https://www.googleapis.com/auth/cloud-platform"]
+            )
+            client = vision.ImageAnnotatorClient(credentials=credentials)
+            
+            # Test the client immediately
+            try:
+                test_response = client.annotate_image({
+                    'image': {'content': b''},
+                    'features': [{'type_': vision.Feature.Type.TEXT_DETECTION}]
+                })
+                st.success("✅ Vision API connection validated!")
+                return client
+            except Exception as test_error:
+                st.error(f"❌ API test failed: {str(test_error)}")
+                raise
+            
+        # Fallback methods...
     except Exception as e:
-        st.error(f"🔴 CRITICAL AUTH ERROR: {str(e)}", icon="🚨")
-        st.error("""
-            **Troubleshooting Checklist:**
-            1. Service account has **Cloud Vision API User** role
-            2. Vision API is enabled in [Google Cloud Console](https://console.cloud.google.com/apis/library/vision.googleapis.com)
-            3. Key file is valid (no missing fields)
-            4. For Streamlit Sharing: Secrets are formatted correctly
+        st.error(f"""
+            🔴 Critical Authentication Failure
+            Error: {str(e)}
+            
+            Required Steps:
+            1. Ensure service account has 'Cloud Vision API User' role
+            2. Enable Vision API at [Google Cloud Console](https://console.cloud.google.com/apis/library/vision.googleapis.com)
+            3. Verify JSON key contains ALL required fields
+            4. Check for network/firewall issues
         """)
         raise
 
