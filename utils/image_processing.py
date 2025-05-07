@@ -18,7 +18,7 @@ def get_google_vision_client():
             return vision.ImageAnnotatorClient(credentials=credentials)
         
         # Option 2: Local JSON file
-        credential_path = "../../credentials/google_Api.json"
+        credential_path = "../credentials/google_Api.json"
         if os.path.exists(credential_path):
             credentials = service_account.Credentials.from_service_account_file(credential_path)
             return vision.ImageAnnotatorClient(credentials=credentials)
