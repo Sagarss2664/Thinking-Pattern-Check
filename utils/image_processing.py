@@ -10,39 +10,45 @@ import json
 
 def get_google_vision_client():
     try:
-        # Method 1: Direct credentials with explicit scopes
-        if os.path.exists("credentials/google_Api.json"):
-            credentials = service_account.Credentials.from_service_account_file(
-                "credentials/google_Api.json",
-                scopes=["https://www.googleapis.com/auth/cloud-platform"]
-            )
-            client = vision.ImageAnnotatorClient(credentials=credentials)
-            
-            # Test the client immediately
-            try:
-                test_response = client.annotate_image({
-                    'image': {'content': b''},
-                    'features': [{'type_': vision.Feature.Type.TEXT_DETECTION}]
-                })
-                st.success("✅ Vision API connection validated!")
-                return client
-            except Exception as test_error:
-                st.error(f"❌ API test failed: {str(test_error)}")
-                raise
-            
-        # Fallback methods...
+        # Method 1: Full manual authentication
+        from google.auth.transport.requests import Request
+        from google.oauth2 import service_account
+        
+        # Force fresh credentials
+        credentials = service_account.Credentials.from_service_account_file(
+            "credentials/google_Api.json",
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
+        
+        if not credentials.valid:
+            credentials.refresh(Request())
+        
+        # Create custom client with explicit endpoint
+        client_options = {
+            "api_endpoint": "vision.googleapis.com",
+            "credentials": credentials
+        }
+        client = vision.ImageAnnotatorClient(client_options=client_options)
+        
+        # Hard validation test
+        from google.protobuf.json_format import MessageToDict
+        test_response = client.annotate_image({
+            "image": {"content": b"test"},
+            "features": [{"type_": vision.Feature.Type.TEXT_DETECTION}]
+        })
+        st.success(f"✅ Vision API validated. Response: {MessageToDict(test_response._pb)}")
+        return client
+
     except Exception as e:
         st.error(f"""
-            🔴 Critical Authentication Failure
-            Error: {str(e)}
-            
-            Required Steps:
-            1. Ensure service account has 'Cloud Vision API User' role
-            2. Enable Vision API at [Google Cloud Console](https://console.cloud.google.com/apis/library/vision.googleapis.com)
-            3. Verify JSON key contains ALL required fields
-            4. Check for network/firewall issues
+            🔴 AUTHENTICATION FAILURE DIAGNOSTICS:
+            1. Key Path: {os.path.abspath("credentials/google_Api.json")}
+            2. Key Valid: {os.path.exists("credentials/google_Api.json")}
+            3. Service Account: {credentials.service_account_email if 'credentials' in locals() else 'N/A'}
+            4. Token Valid: {credentials.valid if 'credentials' in locals() else 'N/A'}
+            5. Full Error: {str(e)}
         """)
-        raise
+        
 
 def heic_to_pil(heic_path):
     """Convert HEIC image to PIL Image"""
