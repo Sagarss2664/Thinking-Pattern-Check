@@ -9,29 +9,43 @@ import streamlit as st
 import json
 
 def get_google_vision_client():
-    """Initialize Google Vision client with credentials"""
     try:
-        # Option 1: Streamlit Secrets (properly formatted)
+        # Debug: Print available auth methods
+        st.write("Checking authentication methods...")
+        
+        # Method 1: Streamlit Secrets (for deployment)
         if 'gcp_service_account' in st.secrets:
-            creds_info = dict(st.secrets["gcp_service_account"])
-            credentials = service_account.Credentials.from_service_account_info(creds_info)
+            st.write("Attempting Streamlit secrets auth...")
+            creds_dict = dict(st.secrets["gcp_service_account"])
+            # Fix escaped newlines in private key
+            creds_dict['private_key'] = creds_dict['private_key'].replace('\\n', '\n')
+            credentials = service_account.Credentials.from_service_account_info(creds_dict)
+            st.success("✅ Authenticated via Streamlit secrets!")
             return vision.ImageAnnotatorClient(credentials=credentials)
         
-        # Option 2: Local JSON file
-        credential_path = "credentials/google_Api.json"
-        if os.path.exists(credential_path):
-            credentials = service_account.Credentials.from_service_account_file(credential_path)
-            return vision.ImageAnnotatorClient(credentials=credentials)
+        # Method 2: Local JSON file (for development)
+        cred_path = "credentials/google_Api.json"
+        if os.path.exists(cred_path):
+            st.write(f"Attempting local JSON auth ({cred_path})...")
+            client = vision.ImageAnnotatorClient.from_service_account_file(cred_path)
+            st.success("✅ Authenticated via local JSON file!")
+            return client
         
-        # Option 3: Environment variable (for GCP deployments)
-        if 'GOOGLE_APPLICATION_CREDENTIALS' in os.environ:
-            return vision.ImageAnnotatorClient()
-            
-        raise Exception("No valid Google Cloud credentials found")
+        # Method 3: Environment variable (fallback)
+        st.write("Attempting environment variable auth...")
+        client = vision.ImageAnnotatorClient()
+        st.success("✅ Authenticated via environment variable!")
+        return client
         
     except Exception as e:
-        st.error(f"❌ Failed to initialize Google Vision client: {str(e)}")
-        st.error("Please check your authentication setup")
+        st.error(f"🔴 CRITICAL AUTH ERROR: {str(e)}", icon="🚨")
+        st.error("""
+            **Troubleshooting Checklist:**
+            1. Service account has **Cloud Vision API User** role
+            2. Vision API is enabled in [Google Cloud Console](https://console.cloud.google.com/apis/library/vision.googleapis.com)
+            3. Key file is valid (no missing fields)
+            4. For Streamlit Sharing: Secrets are formatted correctly
+        """)
         raise
 
 def heic_to_pil(heic_path):
