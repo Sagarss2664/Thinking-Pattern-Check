@@ -5,9 +5,7 @@ matplotlib==3.8.3
 scikit-image==0.22.0
 scikit-learn==1.4.0
 tensorflow>=2.16.0
-google-cloud-vision>=3.0.0
 pillow==10.1.0
 pandas==2.2.0
-google-auth>=2.0.0
-google-auth-oauthlib>=0.4.0
-pyheif==0.8.0
+pytesseract==0.3.10
+pyheif>=0.8.0  # Optional, only if HEIC support is needed

@@ -1,57 +1,39 @@
 import os
 import cv2
-import pyheif
 import numpy as np
 from PIL import Image
-from google.cloud import vision
-from google.oauth2 import service_account
 import streamlit as st
-import json
+import pytesseract
+from pytesseract import Output
 
-def get_google_vision_client():
+def initialize_tesseract():
+    """Initialize Tesseract OCR with configuration"""
     try:
-        # Method 1: Full manual authentication
-        from google.auth.transport.requests import Request
-        from google.oauth2 import service_account
+        # Configure Tesseract path (if needed)
+        # pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'
         
-        # Force fresh credentials
-        credentials = service_account.Credentials.from_service_account_file(
-            "../../credentials/google_Api.json",
-            scopes=["https://www.googleapis.com/robot/v1/metadata/x509/ocr-892%40directed-seeker-456203-c1.iam.gserviceaccount.com"]
-        )
-        
-        if not credentials.valid:
-            credentials.refresh(Request())
-        
-        # Create custom client with explicit endpoint
-        client_options = {
-            "api_endpoint": "vision.googleapis.com",
-            "credentials": credentials
-        }
-        client = vision.ImageAnnotatorClient(client_options=client_options)
-        
-        # Hard validation test
-        from google.protobuf.json_format import MessageToDict
-        test_response = client.annotate_image({
-            "image": {"content": b"test"},
-            "features": [{"type_": vision.Feature.Type.TEXT_DETECTION}]
-        })
-        st.success(f"✅ Vision API validated. Response: {MessageToDict(test_response._pb)}")
-        return client
-
+        # Test Tesseract installation
+        test_text = pytesseract.image_to_string(Image.new('RGB', (100, 100), color='white'))
+        st.success("✅ Tesseract OCR initialized successfully")
     except Exception as e:
         st.error(f"""
-            🔴 AUTHENTICATION FAILURE DIAGNOSTICS:
-            1. Key Path: {os.path.abspath("credentials/google_Api.json")}
-            2. Key Valid: {os.path.exists("credentials/google_Api.json")}
-            3. Service Account: {credentials.service_account_email if 'credentials' in locals() else 'N/A'}
-            4. Token Valid: {credentials.valid if 'credentials' in locals() else 'N/A'}
-            5. Full Error: {str(e)}
+            🔴 Tesseract Initialization Failed - Diagnostic Info:
+            
+            Common Solutions:
+            1. Install Tesseract OCR: 
+               - Linux: sudo apt install tesseract-ocr
+               - Mac: brew install tesseract
+               - Windows: Download installer
+            2. Install language packs if needed
+            3. Verify pytesseract can find the tesseract executable
+            
+            Full Error: {str(e)}
         """)
-        
+        raise
 
 def heic_to_pil(heic_path):
     """Convert HEIC image to PIL Image"""
+    import pyheif
     heif_file = pyheif.read(heic_path)
     image = Image.frombytes(
         heif_file.mode,
@@ -63,7 +45,6 @@ def heic_to_pil(heic_path):
     )
     return image
 
-
 def process_image(image_path):
     """Process an image file and return OpenCV format"""
     if image_path.lower().endswith('.heic'):
@@ -73,53 +54,59 @@ def process_image(image_path):
     return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
 def extract_letters(img_cv, output_folder):
-    """Extract 'm' letters from image using Google Vision API"""
+    """Extract 'm' letters from image using Tesseract OCR"""
     os.makedirs(output_folder, exist_ok=True)
     
     try:
-        client = get_google_vision_client()
-        _, encoded_image = cv2.imencode('.jpg', img_cv)
-        content = encoded_image.tobytes()
-
-        image = vision.Image(content=content)
-        context = vision.ImageContext(language_hints=["en-t-i0-handwrit"])
-        response = client.document_text_detection(image=image, image_context=context)
-
+        # Initialize Tesseract
+        initialize_tesseract()
+        
+        # Convert to grayscale and threshold for better OCR
+        gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        
+        # Get OCR data with character-level bounding boxes
+        data = pytesseract.image_to_data(
+            thresh, 
+            output_type=Output.DICT,
+            config='--psm 6 -c tessedit_char_whitelist=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        )
+        
         m_count = 0
         m_images = []
-
-        if response.error.message:
-            raise Exception(f'Google Vision API error: {response.error.message}')
-
-        for page in response.full_text_annotation.pages:
-            for block in page.blocks:
-                for paragraph in block.paragraphs:
-                    for word in paragraph.words:
-                        for symbol in word.symbols:
-                            char = symbol.text.lower()
-                            if char == 'm':
-                                vertices = symbol.bounding_box.vertices
-                                x_coords = [vertex.x for vertex in vertices]
-                                y_coords = [vertex.y for vertex in vertices]
-
-                                x1, x2 = min(x_coords), max(x_coords)
-                                y1, y2 = min(y_coords), max(y_coords)
-
-                                padding = 2
-                                x1 = max(0, x1 - padding)
-                                y1 = max(0, y1 - padding)
-                                x2 = min(img_cv.shape[1], x2 + padding)
-                                y2 = min(img_cv.shape[0], y2 + padding)
-
-                                if x1 >= x2 or y1 >= y2:
-                                    continue
-
-                                cropped = img_cv[y1:y2, x1:x2]
-                                if cropped.size > 0:
-                                    m_path = os.path.join(output_folder, f'm_{m_count}.png')
-                                    cv2.imwrite(m_path, cropped)
-                                    m_images.append(m_path)
-                                    m_count += 1
+        
+        # Loop through each detected character
+        for i in range(len(data['text'])):
+            char = data['text'][i].lower()
+            conf = int(data['conf'][i])
+            
+            # Only process confident 'm' detections
+            if char == 'm' and conf > 60:
+                (x, y, w, h) = (
+                    data['left'][i],
+                    data['top'][i],
+                    data['width'][i],
+                    data['height'][i]
+                )
+                
+                # Add padding around the character
+                padding = 2
+                x1 = max(0, x - padding)
+                y1 = max(0, y - padding)
+                x2 = min(img_cv.shape[1], x + w + padding)
+                y2 = min(img_cv.shape[0], y + h + padding)
+                
+                if x1 >= x2 or y1 >= y2:
+                    continue
+                
+                # Extract and save the 'm'
+                cropped = img_cv[y1:y2, x1:x2]
+                if cropped.size > 0:
+                    m_path = os.path.join(output_folder, f'm_{m_count}.png')
+                    cv2.imwrite(m_path, cropped)
+                    m_images.append(m_path)
+                    m_count += 1
+        
         return m_images
     
     except Exception as e:
