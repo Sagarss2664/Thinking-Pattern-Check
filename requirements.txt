@@ -1,11 +1,10 @@
 streamlit==1.32.0
 opencv-python-headless==4.9.0.80
 numpy==1.26.4
-matplotlib==3.8.3
+pillow==10.1.0
+pytesseract==0.3.10
+pandas==2.2.0
 scikit-image==0.22.0
 scikit-learn==1.4.0
+matplotlib==3.8.3
 tensorflow>=2.16.0
-pillow==10.1.0
-pandas==2.2.0
-pytesseract==0.3.10
-pyheif>=0.8.0  # Optional, only if HEIC support is needed
